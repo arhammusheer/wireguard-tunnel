@@ -1,17 +1,25 @@
 FROM alpine:latest
-LABEL maintainer="arhammusheer"
 
-# Install WireGuard and other necessary packages
-RUN apk add --no-cache wireguard-tools iptables bash
+# Install wireguard packges
+RUN apk --no-cache add wireguard-tools iptables ip6tables inotify-tools
 
-# Generate WireGuard keys
-RUN wg genkey | tee /etc/wireguard/privatekey | wg pubkey > /etc/wireguard/publickey
+# Add main work dir to PATH
+WORKDIR /scripts
+ENV PATH="/scripts:${PATH}"
 
-# Adjust permissions for the keys
-RUN chmod 600 /etc/wireguard/privatekey /etc/wireguard/publickey
+# Use iptables masquerade NAT rule
+ENV IPTABLES_MASQ=1
 
-# Copy the entrypoint script into the container
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# Watch for changes to interface conf files (default off)
+ENV WATCH_CHANGES=0
 
-ENTRYPOINT ["/entrypoint.sh"]
+# Copy scripts to containers
+COPY run /scripts
+COPY genkeys /scripts
+RUN chmod 755 /scripts/*
+
+# Wirguard interface configs go in /etc/wireguard
+VOLUME /etc/wireguard
+
+# Normal behavior is just to run wireguard with existing configs
+CMD ["run"]
