@@ -1,25 +1,18 @@
-FROM alpine:latest
+# Use an official Ubuntu base image
+FROM ubuntu:20.04
 
-# Install wireguard packges
-RUN apk --no-cache add wireguard-tools iptables ip6tables inotify-tools
+# Install WireGuard and other necessary tools
+RUN apt-get update && \
+	apt-get install -y software-properties-common && \
+	add-apt-repository -y ppa:wireguard/wireguard && \
+	apt-get update && \
+	apt-get install -y wireguard iptables qrencode
 
-# Add main work dir to PATH
-WORKDIR /scripts
-ENV PATH="/scripts:${PATH}"
+# Copy the startup script into the container
+COPY entrypoint.sh /entrypoint.sh
 
-# Use iptables masquerade NAT rule
-ENV IPTABLES_MASQ=1
+# Make the startup script executable
+RUN chmod +x /entrypoint.sh
 
-# Watch for changes to interface conf files (default off)
-ENV WATCH_CHANGES=0
-
-# Copy scripts to containers
-COPY run /scripts
-COPY genkeys /scripts
-RUN chmod 755 /scripts/*
-
-# Wirguard interface configs go in /etc/wireguard
-VOLUME /etc/wireguard
-
-# Normal behavior is just to run wireguard with existing configs
-CMD ["run"]
+# Run the startup script
+ENTRYPOINT ["/entrypoint.sh"]
